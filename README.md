@@ -31,6 +31,17 @@ These metrics are chosen because the dataset is highly imbalanced, making accura
 ---
 
 ## Evaluation Function
+```
+def evaluate(y_true, y_pred, y_score):
+    return {
+        "precision": precision_score(y_true, y_pred),
+        "recall": recall_score(y_true, y_pred),
+        "f1": f1_score(y_true, y_pred),
+        "roc_auc": roc_auc_score(y_true, y_score),
+        "confusion_matrix": confusion_matrix(y_true, y_pred)
+    }
+
+```
 
 A helper function is defined to compute all evaluation metrics consistently for every model.
 
@@ -49,6 +60,22 @@ And returns a dictionary of performance metrics.
 ---
 
 ## Isolation Forest
+```
+iso_forest = IsolationForest(
+    n_estimators=300,
+    contamination=0.003,
+    random_state=42,
+    n_jobs=-1,
+    max_samples=0.8
+)
+iso_forest.fit(X_train)
+
+iso_scores = -iso_forest.decision_function(X_test)
+iso_pred = (iso_forest.predict(X_test) == -1).astype(int)
+
+iso_results = evaluate(y_test, iso_pred, iso_scores)
+
+```
 
 ### Model Initialization
 Isolation Forest is initialized with a fixed number of trees and a contamination value close to the expected fraud ratio.
@@ -74,7 +101,21 @@ Isolation Forest provides a conservative baseline with low false positives and s
 ---
 
 ## One-Class SVM
+```
+ocsvm = OneClassSVM(
+    kernel="rbf",
+    gamma="scale",
+    nu=0.0017
+)
 
+ocsvm.fit(X_train_normal)
+
+svm_scores = -ocsvm.decision_function(X_test)
+svm_pred = (ocsvm.predict(X_test) == -1).astype(int)
+
+svm_results = evaluate(y_test, svm_pred, svm_scores)
+
+```
 ### Model Initialization
 One-Class SVM is initialized with an RBF kernel to learn a non-linear boundary around normal data.
 
@@ -100,6 +141,36 @@ One-Class SVM acts as a high-recall model that detects most anomalies but may pr
 ---
 
 ## Autoencoder
+
+```
+input_dim = X_train.shape[1]
+
+inputs = Input(shape=(input_dim,))
+x = Dense(64, activation="relu")(inputs)
+x = Dense(32, activation="relu")(x)
+x = Dense(64, activation="relu")(x)
+outputs = Dense(input_dim, activation="linear")(x)
+
+autoencoder = Model(inputs, outputs)
+autoencoder.compile(optimizer="adam", loss="mse")
+
+autoencoder.fit(
+    X_train_normal,
+    X_train_normal,
+    epochs=100,
+    batch_size=256,
+    validation_split=0.1,
+    callbacks=[early_stop],
+    verbose=1
+)
+
+reconstructions = autoencoder.predict(X_test)
+reconstruction_error = np.mean(
+    np.square(X_test - reconstructions),
+    axis=1
+)
+
+```
 
 ### Model Architecture
 The autoencoder is a neural network with:

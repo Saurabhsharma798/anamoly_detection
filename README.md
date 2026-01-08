@@ -1,223 +1,117 @@
-```
-1. Importing Libraries
-import numpy as np
-import pandas as pd
+# Anomaly Detection – Base Model Training
 
-from sklearn.ensemble import IsolationForest
-from sklearn.svm import OneClassSVM
-from sklearn.metrics import (
-    classification_report,
-    confusion_matrix,
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score
-)
-```
-Explanation
+The goal of this stage is to establish **baseline performance** using single anomaly detection models before moving to ensemble and GenAI-based methods.
 
-numpy, pandas: Used for numerical operations and data handling.
+---
 
-IsolationForest: Tree-based unsupervised anomaly detection model.
+## Datasets Used
+The experiments are performed separately on the following datasets:
 
-OneClassSVM: Boundary-based unsupervised anomaly detector.
+1. **NSL-KDD Dataset**
+   - Used for network intrusion (attack) detection
+   - Contains both normal and attack traffic records
+   - Mixed numerical and categorical features
 
-sklearn.metrics: Used to evaluate model performance using standard classification metrics.
+2. **Credit Card Fraud Dataset**
+   - Used for fraud detection
+   - Highly imbalanced dataset
+   - All features are numerical (mostly PCA-transformed)
 
-## Why needed?
-Anomaly detection results must be evaluated quantitatively to compare base models with ensembles later.
-```
-2. Evaluation Function
-def evaluate_model(y_true, y_pred, y_score=None):
-    y_true = np.array(y_true).astype(int)
-    y_pred = np.array(y_pred).astype(int)
+Each dataset is handled **independently** to maintain domain correctness.
 
-    metrics = {
-        "accuracy": accuracy_score(y_true, y_pred),
-        "precision": precision_score(y_true, y_pred, zero_division=0),
-        "recall": recall_score(y_true, y_pred, zero_division=0),
-        "f1_score": f1_score(y_true, y_pred, zero_division=0)
-    }
+---
 
-    if y_score is not None:
-        metrics["roc_auc"] = roc_auc_score(y_true, y_score)
+## Label Convention
+For consistency across all models:
 
-    return metrics
-```
-Explanation
+- `0` → Normal data
+- `1` → Anomalous data (Attack / Fraud)
 
-Converts labels to integers to avoid type mismatch errors.
+All labels are converted into this binary format before evaluation.
 
-Computes:
+---
 
-Accuracy → overall correctness
+## Models Implemented (Base Models)
 
-Precision → correctness of anomaly predictions
+The following **single learner anomaly detection models** are trained:
 
-Recall → ability to detect actual anomalies
+### 1. Isolation Forest
+- Tree-based unsupervised anomaly detection model
+- Detects anomalies by isolating rare data points
+- Suitable for high-dimensional data
 
-F1-score → balance between precision and recall
+### 2. One-Class Support Vector Machine (OCSVM)
+- Learns a boundary around normal data
+- Detects anomalies that fall outside this boundary
+- Sensitive to subtle anomaly patterns
 
-roc_auc is calculated only if anomaly scores are available.
+### 3. Autoencoder (Neural Network)
+- Learns to reconstruct normal data
+- Anomalies are detected using high reconstruction error
+- Useful for capturing non-linear patterns
 
-## Why important?
-Anomaly detection datasets are highly imbalanced, so multiple metrics are required.
-```
-3. Isolation Forest – Training
-iso_forest = IsolationForest(
-    n_estimators=200,
-    contamination="auto",
-    random_state=42
-)
+These models serve as **baseline learners**.
 
-iso_forest.fit(X_train)
-```
-Explanation
+---
 
-n_estimators=200: Number of trees → more trees = stable anomaly isolation.
+## Training Approach
+- Models are trained in an **unsupervised manner**
+- Training is primarily done on normal data patterns
+- No class balancing or data augmentation is applied at this stage
 
-contamination="auto": Automatically estimates anomaly proportion.
+The purpose is **not to achieve perfect performance**, but to create a reference point for comparison.
 
-fit(X_train): Model learns normal data patterns.
+---
 
-## Why Isolation Forest?
-It isolates anomalies using random splits and works well for high-dimensional data.
-```
-4. Isolation Forest – Prediction & Label Conversion
-y_pred_if = iso_forest.predict(X_test)
-y_pred_if = np.where(y_pred_if == -1, 1, 0)
-```
-Explanation
+## Evaluation Metrics
+Each model is evaluated using:
 
-Isolation Forest outputs:
+- Accuracy  
+- Precision  
+- Recall  
+- F1-score  
+- ROC-AUC  
+- Confusion Matrix  
 
--1 → anomaly
+ **Note:**  
+Accuracy is reported but not relied upon heavily due to class imbalance. Recall and F1-score are more important for anomaly detection.
 
-+1 → normal
+---
 
-Converted to:
+## Observations
+- Base models show moderate recall and low precision
+- This behavior is expected for unsupervised anomaly detection
+- Results highlight the limitations of single learners
+- These limitations justify the use of ensemble and GenAI-based methods later
 
-1 → anomaly
+---
 
-0 → normal
+## Purpose of This Stage
+- Establish baseline anomaly detection performance
+- Compare different single learners
+- Provide a foundation for:
+  - Traditional ensemble methods
+  - GenAI-augmented ensemble models
+  - Statistical significance testing
 
-## Why convert?
-All models must follow one unified label system for evaluation and ensembles.
-```
-5. Isolation Forest – Anomaly Scores
-y_score_if = -iso_forest.decision_function(X_test)
-```
-Explanation
+---
 
-decision_function() gives distance from normality.
+## Next Steps
+The next phases of the project will include:
 
-Negative sign ensures higher score = higher anomaly likelihood.
+1. Traditional ensemble models (Voting, Bagging, Boosting)
+2. GenAI-based data augmentation
+3. GenAI as an auxiliary learner
+4. GenAI-powered ensemble models
+5. Statistical validation using ANOVA
 
-## Used for: ROC-AUC calculation and ensemble weighting.
-```
-6. Isolation Forest – Evaluation
-if_metrics = evaluate_model(y_test, y_pred_if, y_score_if)
+---
 
-print(if_metrics)
-print(confusion_matrix(y_test, y_pred_if))
-```
-Explanation
+## Reproducibility
+All experiments are conducted using Python and standard machine learning libraries.  
+The workflow is modular and can be easily extended for ensemble and GenAI integration.
 
-Computes all evaluation metrics.
+---
 
-Confusion matrix shows:
-
-True Positives
-
-False Positives
-
-False Negatives
-
-True Negatives
-
-## Purpose: Establish baseline performance.
-```
-7. One-Class SVM – Training
-ocsvm = OneClassSVM(
-    kernel="rbf",
-    gamma="scale",
-    nu=0.05
-)
-
-ocsvm.fit(X_train)
-```
-Explanation
-
-rbf kernel: Captures non-linear boundaries.
-
-nu=0.05: Expected anomaly proportion.
-
-Learns boundary enclosing normal data.
-
-## Why OCSVM?
-It is sensitive to subtle anomalies but prone to false positives.
-```
-8. One-Class SVM – Prediction & Evaluation
-y_pred_svm = ocsvm.predict(X_test)
-y_pred_svm = np.where(y_pred_svm == -1, 1, 0)
-
-y_score_svm = -ocsvm.decision_function(X_test)
-
-svm_metrics = evaluate_model(y_test, y_pred_svm, y_score_svm)
-```
-Explanation
-
-Same label conversion as Isolation Forest.
-
-Decision scores used for ROC-AUC.
-
-## Purpose: Compare boundary-based detection vs tree-based detection.
-```
-9. Autoencoder – Model Definition
-input_layer = Input(shape=(input_dim,))
-encoded = Dense(64, activation="relu")(input_layer)
-encoded = Dense(32, activation="relu")(encoded)
-
-decoded = Dense(64, activation="relu")(encoded)
-decoded = Dense(input_dim, activation="linear")(decoded)
-```
-Explanation
-
-Encoder compresses data.
-
-Decoder reconstructs input.
-
-Anomalies produce high reconstruction error.
-
-##  Why Autoencoder?
-Effective for complex, high-dimensional anomaly patterns.
-```
- 10. Autoencoder – Training
-autoencoder.fit(
-    X_train, X_train,
-    epochs=30,
-    batch_size=256,
-    validation_split=0.1,
-    shuffle=True
-)
-```
-Explanation
-
-Trained only on normal data.
-
-Learns reconstruction of normal behavior.
-```
- 11. Autoencoder – Anomaly Detection
-reconstruction_error = np.mean(np.square(X_test - reconstructions), axis=1)
-threshold = np.percentile(reconstruction_error, 95)
-y_pred_ae = (reconstruction_error > threshold).astype(int)
-```
-
-Explanation
-
-High reconstruction error → anomaly.
-
-Threshold set at 95th percentile.
-
-## Purpose: Reconstruction-based anomaly detection baseline.
+## Conclusion
+This repository currently contains the **baseline model training and evaluation** required for anomaly detection research. These results act as a benchmark for evaluating improvements achieved through ensemble learning and Generative AI techniques.

@@ -126,6 +126,130 @@ These results will be used later for:
 
 ---
 
+## Step 13: Create an Evaluation Function for Ensemble Models
+
+In this step, a common evaluation function is defined to measure the performance of ensemble models.
+
+The function calculates Accuracy, Precision, Recall, and F1-score.
+
+It also calculates ROC-AUC when anomaly scores are provided.
+
+This ensures that all ensemble models are evaluated using the same criteria.
+
+Using a single evaluation function makes performance comparison fair and consistent.
+
+---
+
+## Step 14: Combine Predictions from All Models
+
+Predicted labels from different anomaly detection models (Isolation Forest, One-Class SVM, and Autoencoder) are collected.
+
+Predictions from each model are stacked together.
+
+Each row represents one model’s predictions.
+
+This step prepares the outputs for ensemble decision-making.
+
+--
+
+## Step 15: Apply Majority Voting to Get Final Predictions
+
+Majority voting is used to decide the final class label for each sample.
+
+If most models predict a sample as anomalous, it is labeled as an anomaly.
+
+If most models predict it as normal, it is labeled as normal.
+
+This approach reduces the effect of individual model errors.
+
+---
+
+## Step 16: Combine Anomaly Scores for ROC-AUC Calculation
+
+Anomaly scores from all individual models are combined.
+
+Scores are averaged to produce a single ensemble anomaly score.
+
+This combined score is used to calculate ROC-AUC.
+
+Using averaged scores provides a smoother and more reliable ranking of anomalies.
+
+---
+
+## Step 17: Evaluate Majority Voting Ensemble Performance
+
+The majority voting ensemble predictions are evaluated.
+
+Accuracy, Precision, Recall, and F1-score are calculated.
+
+ROC-AUC is computed using the combined anomaly score.
+
+This step shows whether the ensemble improves performance compared to individual models.
+
+---
+
+## Step 18: Define Weights for Weighted Ensemble Models
+
+Different weights are assigned to each anomaly detection model.
+
+Models with better performance are given higher weights.
+
+Weights control how much each model influences the final decision.
+
+This allows the ensemble to rely more on stronger models.
+
+---
+
+Step 19: Calculate Weighted Anomaly Score
+
+A weighted anomaly score is computed using the assigned weights.
+
+Each model’s anomaly score is multiplied by its weight.
+
+All weighted scores are summed to obtain a final score.
+
+This creates a more balanced and performance-aware anomaly score.
+
+---
+
+## Step 20: Select Threshold for Weighted Ensemble
+
+A threshold is chosen using a percentile-based method.
+
+Samples with scores above the threshold are classified as anomalies.
+
+The threshold can be tuned to control false positives and false negatives.
+
+This step converts anomaly scores into class labels.
+
+---
+
+## Step 21: Evaluate Weighted Voting Ensemble Performance
+
+The weighted ensemble predictions are evaluated.
+
+Classification metrics such as Accuracy, Precision, Recall, and F1-score are calculated.
+
+ROC-AUC is computed using weighted anomaly scores.
+
+This evaluation helps determine if weighting improves detection performance.
+
+---
+
+## Step 22: Compare Ensemble Model Results
+
+Performance metrics from:
+
+Majority Voting Ensemble
+
+Weighted Voting Ensemble
+
+are collected and displayed in a table.
+
+This comparison helps identify the most effective ensemble strategy.
+
+
+
 ## Summary
 This notebook:
 - Trains three base anomaly detection models
